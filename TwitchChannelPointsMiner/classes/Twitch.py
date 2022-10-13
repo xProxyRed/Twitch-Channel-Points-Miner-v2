@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from secrets import choice, token_hex
 
+from uuid import uuid1
+
 import requests
 
 from TwitchChannelPointsMiner.classes.entities.Campaign import Campaign
@@ -257,13 +259,14 @@ class Twitch(object):
                 GQLOperations.url,
                 json=json_data,
                 headers={
-                    "Authorization": f"OAuth {self.twitch_login.get_auth_token()}",
-                    "Client-Id": CLIENT_ID,
-                    "Client-Integrity": self.post_integrity(),
-                    "Client-Session-Id": self.client_session,
-                    "Client-Version": self.update_client_version(),
-                    "User-Agent": self.user_agent,
-                    "X-Device-Id": self.device_id,
+                    'accept': 'application/vnd.twitchtv.v3+json',
+                    'api-consumer-type': 'mobile; Android/1309000',
+                    "authorization": f"OAuth {self.twitch_login.get_auth_token()}",
+                    'client-id': CLIENT_ID,
+                    'client-session-id': str(uuid1()),
+                    'user-agent': 'Dalvik/2.1.0 (Linux; U; Android 7.1.2; SM-N976N Build/N2G48C) tv.twitch.android.app/13.9.0/1309000',
+                    'x-app-version': '13.9.0',
+                    'x-device-id': uuid1().hex                    
                 },
             )
             logger.debug(
@@ -290,12 +293,14 @@ class Twitch(object):
                 GQLOperations.integrity_url,
                 json={},
                 headers={
-                    "Authorization": f"OAuth {self.twitch_login.get_auth_token()}",
-                    "Client-Id": CLIENT_ID,
-                    "Client-Session-Id": self.client_session,
-                    "Client-Version": self.update_client_version(),
-                    "User-Agent": self.user_agent,
-                    "X-Device-Id": self.device_id,
+                    'accept': 'application/vnd.twitchtv.v3+json',
+                    'api-consumer-type': 'mobile; Android/1309000',
+                    "authorization": f"OAuth {self.twitch_login.get_auth_token()}",
+                    'client-id': CLIENT_ID,
+                    'client-session-id': str(uuid1()),
+                    'user-agent': 'Dalvik/2.1.0 (Linux; U; Android 7.1.2; SM-N976N Build/N2G48C) tv.twitch.android.app/13.9.0/1309000',
+                    'x-app-version': '13.9.0',
+                    'x-device-id': uuid1().hex                    
                 },
             )
             logger.debug(
