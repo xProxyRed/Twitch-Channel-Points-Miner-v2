@@ -3,7 +3,7 @@ URL = "https://www.twitch.tv"
 IRC = "irc.chat.twitch.tv"
 IRC_PORT = 6667
 WEBSOCKET = "wss://pubsub-edge.twitch.tv/v1"
-CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
+CLIENT_ID = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
 DROP_ID = "c2542d6d-cd10-4532-919b-3d19f30a768b"
 CLIENT_VERSION = "32d439b2-bd5b-4e35-b82a-fae10b04da70"
 
@@ -47,11 +47,11 @@ class GQLOperations:
         },
     }
     ClaimCommunityPoints = {
-        "operationName": "ClaimCommunityPoints",
+        "operationName": "ClaimCommunityPointsMutation",
         "extensions": {
             "persistedQuery": {
                 "version": 1,
-                "sha256Hash": "46aaeebe02c99afdf4fc97c7c0cba964124bf6b0af229395f1f6d1feed05b3d0",
+                "sha256Hash": "3ee69ceb3cfa8c952d572968fc2571cbdf76760bca52c643772eb61c09281915",
             }
         },
     }
