@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from secrets import choice, token_hex
 
-import json
+import json, pickle
 from base64 import urlsafe_b64decode
 
 import requests
@@ -289,28 +289,46 @@ class Twitch(object):
         ):
             return self.integrity
         try:
-            response = requests.post(
-                GQLOperations.integrity_url,
-                json={},
-                headers={
-                    "Authorization": f"OAuth {self.twitch_login.get_auth_token()}",
-                    "Client-Id": CLIENT_ID,
-                    "Client-Session-Id": self.client_session,
-                    "Client-Version": self.update_client_version(),
-                    "User-Agent": self.user_agent,
-                    "X-Device-Id": self.device_id,
-                },
+            from undetected_chromedriver import ChromeOptions
+            import seleniumwire.undetected_chromedriver.v2 as uc
+    
+            HEADLESS = False
+
+            options = uc.ChromeOptions()
+            if HEADLESS is True:
+                options.add_argument('--headless')
+            options.add_argument('--log-level=3')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--lang=en')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            #options.add_argument("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36\"")
+            #options.add_argument("--window-size=1920,1080")
+            #options.set_capability("detach", True)
+
+            driver = uc.Chrome(
+                options=options, use_subprocess=True#, executable_path=EXECUTABLE_PATH
             )
-            logger.debug(
-                f"Data: [], Status code: {response.status_code}, Content: {response.text}"
-            )
-            self.integrity = response.json().get("token", None)
-            #logger.info(f"integrity: {self.integrity}")
+            driver.get('https://www.twitch.tv/settings/profile')
+            cookies = pickle.load(open(self.cookies_file, "rb"))
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+            driver.get('https://www.twitch.tv/settings/profile')
+
+            request = driver.wait_for_request("https://gql.twitch.tv/integrity", timeout=20)
+
+            body = request.response.body.decode("UTF-8")
+            driver.quit()
+            integrity_json = json.loads(body)
+
+            self.integrity = integrity_json.get("token", None)
+            logger.info(f"integrity: {self.integrity}")
             
             if self.isBadBot(self.integrity) is True:
                 logger.error("Uh-oh, Twitch has detected this miner as a \"Bad Bot\"")
     
-            self.integrity_expire = response.json().get("expiration", 0)
+            self.integrity_expire = integrity_json.get("expiration", 0)
             #logger.info(f"integrity_expire: {self.integrity_expire}")
             return self.integrity
         except requests.exceptions.RequestException as e:
