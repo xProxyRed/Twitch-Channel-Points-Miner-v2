@@ -292,7 +292,7 @@ class Twitch(object):
             from undetected_chromedriver import ChromeOptions
             import seleniumwire.undetected_chromedriver.v2 as uc
     
-            HEADLESS = False
+            HEADLESS = False # is_bad_bot becomes true when I use headless mode.
 
             options = uc.ChromeOptions()
             if HEADLESS is True:
