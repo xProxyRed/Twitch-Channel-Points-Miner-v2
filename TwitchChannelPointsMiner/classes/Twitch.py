@@ -310,7 +310,7 @@ class Twitch(object):
             driver = uc.Chrome(
                 options=options, use_subprocess=True#, executable_path=EXECUTABLE_PATH
             )
-            driver.get('https://www.twitch.tv/settings/profile')
+            driver.get('https://www.twitch.tv/robots.txt')
             cookies = pickle.load(open(self.cookies_file, "rb"))
             for cookie in cookies:
                 driver.add_cookie(cookie)
