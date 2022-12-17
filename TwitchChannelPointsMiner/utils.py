@@ -32,7 +32,8 @@ def float_round(number, ndigits=2):
 
 def server_time(message_data):
     return (
-        datetime.fromtimestamp(message_data["server_time"], timezone.utc).isoformat()
+        datetime.fromtimestamp(
+            message_data["server_time"], timezone.utc).isoformat()
         + "Z"
         if message_data is not None and "server_time" in message_data
         else datetime.fromtimestamp(time.time(), timezone.utc).isoformat() + "Z"
@@ -58,7 +59,8 @@ def get_user_agent(browser: str) -> str:
     try:
         return USER_AGENTS[platform.system()][browser]
     except KeyError:
-        return USER_AGENTS["Linux"]["FIREFOX"]
+        # return USER_AGENTS["Linux"]["FIREFOX"]
+        return USER_AGENTS["Windows"]["CHROME"]
 
 
 def remove_emoji(string: str) -> str:
@@ -155,7 +157,7 @@ def percentage(a, b):
 
 
 def create_chunks(lst, n):
-    return [lst[i : (i + n)] for i in range(0, len(lst), n)]  # noqa: E203
+    return [lst[i: (i + n)] for i in range(0, len(lst), n)]  # noqa: E203
 
 
 def download_file(name, fpath):

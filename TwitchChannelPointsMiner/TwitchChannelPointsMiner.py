@@ -85,7 +85,8 @@ class TwitchChannelPointsMiner:
         Settings.enable_analytics = enable_analytics
 
         if enable_analytics is True:
-            Settings.analytics_path = os.path.join(Path().absolute(), "analytics", username)
+            Settings.analytics_path = os.path.join(
+                Path().absolute(), "analytics", username)
             Path(Settings.analytics_path).mkdir(parents=True, exist_ok=True)
 
         self.username = username
@@ -98,7 +99,8 @@ class TwitchChannelPointsMiner:
         streamer_settings.bet.default()
         Settings.streamer_settings = streamer_settings
 
-        user_agent = get_user_agent("FIREFOX")
+        # user_agent = get_user_agent("FIREFOX")
+        user_agent = get_user_agent("CHROME")
         self.twitch = Twitch(self.username, user_agent, password)
 
         self.claim_drops_startup = claim_drops_startup
@@ -126,7 +128,8 @@ class TwitchChannelPointsMiner:
                 "Unable to detect if you have the latest version of this script"
             )
         elif current_version != github_version:
-            logger.info(f"You are running the version {current_version} of this script")
+            logger.info(
+                f"You are running the version {current_version} of this script")
             logger.info(f"The latest version on GitHub is: {github_version}")
 
         for sign in [signal.SIGINT, signal.SIGSEGV, signal.SIGTERM]:
@@ -142,7 +145,7 @@ class TwitchChannelPointsMiner:
         # Analytics switch
         if Settings.enable_analytics is True:
             from TwitchChannelPointsMiner.classes.AnalyticsServer import AnalyticsServer
-            
+
             http_server = AnalyticsServer(
                 host=host, port=port, refresh=refresh, days_ago=days_ago
             )
@@ -150,7 +153,8 @@ class TwitchChannelPointsMiner:
             http_server.name = "Analytics Thread"
             http_server.start()
         else:
-            logger.error("Can't start analytics(), please set enable_analytics=True")
+            logger.error(
+                "Can't start analytics(), please set enable_analytics=True")
 
     def mine(
         self,
@@ -196,7 +200,8 @@ class TwitchChannelPointsMiner:
                     streamers_dict[username] = streamer
 
             if followers is True:
-                followers_array = self.twitch.get_followers(order=followers_order)
+                followers_array = self.twitch.get_followers(
+                    order=followers_order)
                 logger.info(
                     f"Load {len(followers_array)} followers from your profile!",
                     extra={"emoji": ":clipboard:"},
@@ -219,7 +224,8 @@ class TwitchChannelPointsMiner:
                             if isinstance(streamers_dict[username], Streamer) is True
                             else Streamer(username)
                         )
-                        streamer.channel_id = self.twitch.get_channel_id(username)
+                        streamer.channel_id = self.twitch.get_channel_id(
+                            username)
                         streamer.settings = set_default_settings(
                             streamer.settings, Settings.streamer_settings
                         )
@@ -261,7 +267,8 @@ class TwitchChannelPointsMiner:
             # If we have at least one streamer with settings = claim_drops True
             # Spawn a thread for sync inventory and dashboard
             if (
-                at_least_one_value_in_settings_is(self.streamers, "claim_drops", True)
+                at_least_one_value_in_settings_is(
+                    self.streamers, "claim_drops", True)
                 is True
             ):
                 self.sync_campaigns_thread = threading.Thread(
@@ -313,7 +320,8 @@ class TwitchChannelPointsMiner:
 
                 if streamer.settings.make_predictions is True:
                     self.ws_pool.submit(
-                        PubsubTopic("predictions-channel-v1", streamer=streamer)
+                        PubsubTopic("predictions-channel-v1",
+                                    streamer=streamer)
                     )
 
             refresh_context = time.time()
@@ -330,7 +338,8 @@ class TwitchChannelPointsMiner:
                         logger.info(
                             f"#{index} - The last PING was sent more than 10 minutes ago. Reconnecting to the WebSocket..."
                         )
-                        WebSocketsPool.handle_reconnection(self.ws_pool.ws[index])
+                        WebSocketsPool.handle_reconnection(
+                            self.ws_pool.ws[index])
 
                 if ((time.time() - refresh_context) // 60) >= 30:
                     refresh_context = time.time()
