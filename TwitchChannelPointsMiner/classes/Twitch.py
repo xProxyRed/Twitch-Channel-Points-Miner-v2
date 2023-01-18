@@ -419,6 +419,7 @@ class Twitch(object):
                 if cookie["name"] == "KP_UIDz":
                     if cookie["value"] is not None:
                         kpsdk_ct = cookie["value"]
+                        logger.info(f"Got kpsdk_ct: {kpsdk_ct}")
                     else:
                         logger.error("Can't extract kpsdk_ct")
 
