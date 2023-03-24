@@ -1,12 +1,8 @@
-import json
 import logging
-import os
 import time
-from datetime import datetime
 from threading import Lock
 
 from TwitchChannelPointsMiner.classes.Chat import ChatPresence, ThreadChat
-from TwitchChannelPointsMiner.classes.entities.Bet import BetSettings, DelayMode
 from TwitchChannelPointsMiner.classes.entities.Stream import Stream
 from TwitchChannelPointsMiner.classes.Settings import Events, Settings
 from TwitchChannelPointsMiner.constants import URL
@@ -17,50 +13,33 @@ logger = logging.getLogger(__name__)
 
 class StreamerSettings(object):
     __slots__ = [
-        "make_predictions",
         "follow_raid",
-        "claim_drops",
-        "claim_moments",
         "watch_streak",
-        "bet",
         "chat",
     ]
 
     def __init__(
         self,
-        make_predictions: bool = None,
         follow_raid: bool = None,
-        claim_drops: bool = None,
-        claim_moments: bool = None,
         watch_streak: bool = None,
-        bet: BetSettings = None,
         chat: ChatPresence = None,
     ):
-        self.make_predictions = make_predictions
         self.follow_raid = follow_raid
-        self.claim_drops = claim_drops
-        self.claim_moments = claim_moments
         self.watch_streak = watch_streak
-        self.bet = bet
         self.chat = chat
 
     def default(self):
         for name in [
-            "make_predictions",
             "follow_raid",
-            "claim_drops",
-            "claim_moments",
             "watch_streak",
         ]:
             if getattr(self, name) is None:
                 setattr(self, name, True)
-        if self.bet is None:
-            self.bet = BetSettings()
         if self.chat is None:
             self.chat = ChatPresence.ONLINE
 
     def __repr__(self):
-        return f"BetSettings(make_predictions={self.make_predictions}, follow_raid={self.follow_raid}, claim_drops={self.claim_drops}, claim_moments={self.claim_moments}, watch_streak={self.watch_streak}, bet={self.bet}, chat={self.chat})"
+        return f"follow_raid={self.follow_raid}, watch_streak={self.watch_streak}, chat={self.chat})"
 
 
 class Streamer(object):
@@ -169,14 +148,6 @@ class Streamer(object):
     def stream_up_elapsed(self):
         return self.stream_up == 0 or ((time.time() - self.stream_up) > 120)
 
-    def drops_condition(self):
-        return (
-            self.settings.claim_drops is True
-            and self.is_online is True
-            and self.stream.drops_tags is True
-            and self.stream.campaigns_ids != []
-        )
-
     def viewer_has_points_multiplier(self):
         return self.activeMultipliers is not None and len(self.activeMultipliers) > 0
 
@@ -191,59 +162,6 @@ class Streamer(object):
             if self.activeMultipliers is not None
             else 0
         )
-
-    def get_prediction_window(self, prediction_window_seconds):
-        delay_mode = self.settings.bet.delay_mode
-        delay = self.settings.bet.delay
-        if delay_mode == DelayMode.FROM_START:
-            return min(delay, prediction_window_seconds)
-        elif delay_mode == DelayMode.FROM_END:
-            return max(prediction_window_seconds - delay, 0)
-        elif delay_mode == DelayMode.PERCENTAGE:
-            return prediction_window_seconds * delay
-        else:
-            return prediction_window_seconds
-
-    # === ANALYTICS === #
-    def persistent_annotations(self, event_type, event_text):
-        event_type = event_type.upper()
-        if event_type in ["WATCH_STREAK", "WIN", "PREDICTION_MADE"]:
-            primary_color = (
-                "#45c1ff"
-                if event_type == "WATCH_STREAK"
-                else ("#ffe045" if event_type == "PREDICTION_MADE" else "#54ff45")
-            )
-            data = {
-                "borderColor": primary_color,
-                "label": {
-                    "style": {"color": "#000", "background": primary_color},
-                    "text": event_text,
-                },
-            }
-            self.__save_json("annotations", data)
-
-    def persistent_series(self, event_type="Watch"):
-        self.__save_json("series", event_type=event_type)
-
-    def __save_json(self, key, data={}, event_type="Watch"):
-        # https://stackoverflow.com/questions/4676195/why-do-i-need-to-multiply-unix-timestamps-by-1000-in-javascript
-        now = datetime.now().replace(microsecond=0)
-        data.update({"x": round(datetime.timestamp(now) * 1000)})
-
-        if key == "series":
-            data.update({"y": self.channel_points})
-            if event_type is not None:
-                data.update({"z": event_type.replace("_", " ").title()})
-
-        fname = os.path.join(Settings.analytics_path, f"{self.username}.json")
-        with self.mutex:
-            json_data = json.load(
-                open(fname, "r")) if os.path.isfile(fname) else {}
-            if key not in json_data:
-                json_data[key] = []
-
-            json_data[key].append(data)
-            json.dump(json_data, open(fname, "w"), indent=4)
 
     def leave_chat(self):
         if self.irc_chat is not None:

@@ -41,8 +41,6 @@ class Events(Enum):
     BONUS_CLAIM = auto()
     MOMENT_CLAIM = auto()
     JOIN_RAID = auto()
-    DROP_CLAIM = auto()
-    DROP_STATUS = auto()
 
     def __str__(self):
         return self.name

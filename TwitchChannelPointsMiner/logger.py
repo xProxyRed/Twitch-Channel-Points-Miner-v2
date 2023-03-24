@@ -2,60 +2,15 @@ import logging
 import os
 import platform
 import queue
-import pytz
 from datetime import datetime
 from logging.handlers import QueueHandler, QueueListener, TimedRotatingFileHandler
 from pathlib import Path
 
 import emoji
-from colorama import Fore, init
+# from colorama import Fore, init
 
-from TwitchChannelPointsMiner.classes.Discord import Discord
 from TwitchChannelPointsMiner.classes.Settings import Events
-from TwitchChannelPointsMiner.classes.Telegram import Telegram
 from TwitchChannelPointsMiner.utils import remove_emoji
-
-
-# Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET.
-class ColorPalette(object):
-    def __init__(self, **kwargs):
-        # Init with default values RESET for all and GREEN and RED only for WIN and LOSE bet
-        # Then set args from kwargs
-        for k in Events:
-            setattr(self, str(k), Fore.RESET)
-        setattr(self, "BET_WIN", Fore.GREEN)
-        setattr(self, "BET_LOSE", Fore.RED)
-
-        for k in kwargs:
-            if k.upper() in dir(self) and getattr(self, k.upper()) is not None:
-                if kwargs[k] in [
-                    Fore.BLACK,
-                    Fore.RED,
-                    Fore.GREEN,
-                    Fore.YELLOW,
-                    Fore.BLUE,
-                    Fore.MAGENTA,
-                    Fore.CYAN,
-                    Fore.WHITE,
-                    Fore.RESET,
-                ]:
-                    setattr(self, k.upper(), kwargs[k])
-                elif kwargs[k].upper() in [
-                    "BLACK",
-                    "RED",
-                    "GREEN",
-                    "YELLOW",
-                    "BLUE",
-                    "MAGENTA",
-                    "CYAN",
-                    "WHITE",
-                    "RESET",
-                ]:
-                    setattr(self, k.upper(), getattr(Fore, kwargs[k].upper()))
-
-    def get(self, key):
-        color = getattr(self, str(key)) if str(key) in dir(self) else None
-        return Fore.RESET if color is None else color
 
 
 class LoggerSettings:
@@ -64,14 +19,10 @@ class LoggerSettings:
         "less",
         "console_level",
         "console_username",
-        "time_zone",
         "file_level",
         "emoji",
         "colored",
-        "color_palette",
         "auto_clear",
-        "telegram",
-        "discord"
     ]
 
     def __init__(
@@ -80,70 +31,26 @@ class LoggerSettings:
         less: bool = False,
         console_level: int = logging.INFO,
         console_username: bool = False,
-        time_zone: str or None = None,
         file_level: int = logging.DEBUG,
         emoji: bool = platform.system() != "Windows",
         colored: bool = False,
-        color_palette: ColorPalette = ColorPalette(),
         auto_clear: bool = True,
-        telegram: Telegram or None = None,
-        discord: Discord or None = None,
     ):
         self.save = save
         self.less = less
         self.console_level = console_level
         self.console_username = console_username
-        self.time_zone = time_zone
         self.file_level = file_level
         self.emoji = emoji
         self.colored = colored
-        self.color_palette = color_palette
+        # self.color_palette = color_palette
         self.auto_clear = auto_clear
-        self.telegram = telegram
-        self.discord = discord
-
-
-class FileFormatter(logging.Formatter):
-    def __init__(self, *, fmt, settings: LoggerSettings, datefmt=None):
-        self.settings = settings
-        self.timezone = None
-        if settings.time_zone:
-            try:
-                self.timezone = pytz.timezone(settings.time_zone)
-                logging.info(f"File logger time zone set to: {self.timezone}")
-            except pytz.UnknownTimeZoneError:
-                logging.error(
-                    f"File logger: invalid time zone: {settings.time_zone}")
-        logging.Formatter.__init__(self, fmt=fmt, datefmt=datefmt)
-
-    def formatTime(self, record, datefmt=None):
-        if self.timezone:
-            dt = datetime.fromtimestamp(record.created, self.timezone)
-        else:
-            dt = datetime.fromtimestamp(record.created)
-        return dt.strftime(datefmt or self.default_time_format)
 
 
 class GlobalFormatter(logging.Formatter):
     def __init__(self, *, fmt, settings: LoggerSettings, datefmt=None):
         self.settings = settings
-        self.timezone = None
-        if settings.time_zone:
-            try:
-                self.timezone = pytz.timezone(settings.time_zone)
-                logging.info(
-                    f"Console logger time zone set to: {self.timezone}")
-            except pytz.UnknownTimeZoneError:
-                logging.error(
-                    f"Console logger: invalid time zone: {settings.time_zone}")
         logging.Formatter.__init__(self, fmt=fmt, datefmt=datefmt)
-
-    def formatTime(self, record, datefmt=None):
-        if self.timezone:
-            dt = datetime.fromtimestamp(record.created, self.timezone)
-        else:
-            dt = datetime.fromtimestamp(record.created)
-        return dt.strftime(datefmt or self.default_time_format)
 
     def format(self, record):
         record.emoji_is_present = (
@@ -169,9 +76,6 @@ class GlobalFormatter(logging.Formatter):
             record.msg = remove_emoji(record.msg)
 
         if hasattr(record, "event"):
-            self.telegram(record)
-            self.discord(record)
-
             if self.settings.colored is True:
                 record.msg = (
                     f"{self.settings.color_palette.get(record.event)}{record.msg}"
@@ -179,34 +83,8 @@ class GlobalFormatter(logging.Formatter):
 
         return super().format(record)
 
-    def telegram(self, record):
-        skip_telegram = False if hasattr(
-            record, "skip_telegram") is False else True
-
-        if (
-            self.settings.telegram is not None
-            and skip_telegram is False
-            and self.settings.telegram.chat_id != 123456789
-        ):
-            self.settings.telegram.send(record.msg, record.event)
-
-    def discord(self, record):
-        skip_discord = False if hasattr(
-            record, "skip_discord") is False else True
-
-        if (
-            self.settings.discord is not None
-            and skip_discord is False
-            and self.settings.discord.webhook_api
-            != "https://discord.com/api/webhooks/0123456789/0a1B2c3D4e5F6g7H8i9J"
-        ):
-            self.settings.discord.send(record.msg, record.event)
-
 
 def configure_loggers(username, settings):
-    if settings.colored is True:
-        init(autoreset=True)
-
     # Queue handler that will handle the logger queue
     logger_queue = queue.Queue(-1)
     queue_handler = QueueHandler(logger_queue)
@@ -253,19 +131,16 @@ def configure_loggers(username, settings):
                 delay=False,
             )
         else:
-            # Getting time zone from the console_handler's formatter since they are the same
-            tz = "" if console_handler.formatter.timezone is False else console_handler.formatter.timezone
             logs_file = os.path.join(
                 logs_path,
-                f"{username}.{datetime.now(tz).strftime('%Y%m%d-%H%M%S')}.log",
+                f"{username}.{datetime.now().strftime('%Y%m%d-%H%M%S')}.log",
             )
             file_handler = logging.FileHandler(logs_file, "w", "utf-8")
 
         file_handler.setFormatter(
-            FileFormatter(
+            logging.Formatter(
                 fmt="%(asctime)s - %(levelname)s - %(name)s - [%(funcName)s]: %(message)s",
                 datefmt="%d/%m/%y %H:%M:%S",
-                settings=settings
             )
         )
         file_handler.setLevel(settings.file_level)

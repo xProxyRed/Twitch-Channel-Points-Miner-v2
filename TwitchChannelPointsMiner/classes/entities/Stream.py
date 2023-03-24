@@ -4,7 +4,6 @@ import time
 from base64 import b64encode
 
 from TwitchChannelPointsMiner.classes.Settings import Settings
-from TwitchChannelPointsMiner.constants import DROP_ID
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +14,6 @@ class Stream(object):
         "title",
         "game",
         "tags",
-        "drops_tags",
-        "campaigns",
-        "campaigns_ids",
         "viewers_count",
         "spade_url",
         "payload",
@@ -33,10 +29,6 @@ class Stream(object):
         self.title = None
         self.game = {}
         self.tags = []
-
-        self.drops_tags = False
-        self.campaigns = []
-        self.campaigns_ids = []
 
         self.viewers_count = 0
         self.__last_update = 0
@@ -57,9 +49,6 @@ class Stream(object):
         self.tags = tags
         self.viewers_count = viewers_count
 
-        self.drops_tags = (
-            DROP_ID in [tag["id"] for tag in self.tags] and self.game != {}
-        )
         self.__last_update = time.time()
 
         logger.debug(f"Update: {self}")
