@@ -70,6 +70,57 @@ class ClientIRC(SingleServerIRCBot):
                         "emoji": ":speech_balloon:", "event": Events.CHAT_MENTION})
     # """
 
+    # """
+    def on_privmsg(self, connection, event):
+        msg = event.arguments[0]
+        logger.info(f"on_privmsg event: {event}")
+        logger.info(f"on_privmsg: {msg}")
+
+        # also self._realname
+        # if msg.startswith(f"@{self._nickname}"):
+        if f"@{self._nickname.lower()}" in msg.lower():
+            # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+            nick = event.source.split("!", 1)[0]
+            # chan = event.target
+
+            logger.info(f"{nick} at {self.channel} wrote: {msg}", extra={
+                        "emoji": ":speech_balloon:", "event": Events.CHAT_MENTION})
+    # """
+
+    # """
+    def on_pubnotice(self, connection, event):
+        msg = event.arguments[0]
+        logger.info(f"on_pubnotice event: {event}")
+        logger.info(f"on_pubnotice: {msg}")
+
+        # also self._realname
+        # if msg.startswith(f"@{self._nickname}"):
+        if f"@{self._nickname.lower()}" in msg.lower():
+            # nickname!username@nickname.tmi.twitch.tv
+            nick = event.source.split("!", 1)[0]
+            # chan = event.target
+
+            logger.info(f"{nick} at {self.channel} wrote: {msg}", extra={
+                        "emoji": ":speech_balloon:", "event": Events.CHAT_MENTION})
+    # """
+
+    # """
+    def on_action(self, connection, event):
+        msg = event.arguments[0]
+        logger.info(f"on_action event: {event}")
+        logger.info(f"on_action: {msg}")
+
+        # also self._realname
+        # if msg.startswith(f"@{self._nickname}"):
+        if f"@{self._nickname.lower()}" in msg.lower():
+            # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+            nick = event.source.split("!", 1)[0]
+            # chan = event.target
+
+            logger.info(f"{nick} at {self.channel} wrote: {msg}", extra={
+                        "emoji": ":speech_balloon:", "event": Events.CHAT_MENTION})
+    # """
+
 
 class ThreadChat(Thread):
     def __deepcopy__(self, memo):
