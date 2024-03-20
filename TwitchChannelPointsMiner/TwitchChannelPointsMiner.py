@@ -456,7 +456,7 @@ class TwitchChannelPointsMiner:
             extra={"emoji": ":hourglass:"},
         )
 
-        if self.events_predictions != {}:
+        if not Settings.logger.less and self.events_predictions != {}:
             print("")
             for event_id in self.events_predictions:
                 event = self.events_predictions[event_id]
@@ -485,12 +485,17 @@ class TwitchChannelPointsMiner:
                     self.streamers[streamer_index].channel_points
                     - self.original_streamers[streamer_index]
                 )
-                logger.info(
-                    f"{repr(self.streamers[streamer_index])}, Total Points Gained (after farming - before farming): {_millify(gained)}",
-                    extra={"emoji": ":robot:"},
+                
+                streamer_gain = (
+                    f"{self.streamers[streamer_index]}, Total Points Gained: {_millify(gained)}"
+                    if Settings.logger.less
+                    else f"{repr(self.streamers[streamer_index])}, Total Points Gained (after farming - before farming): {_millify(gained)}"
                 )
-                if self.streamers[streamer_index].history != {}:
-                    logger.info(
-                        f"{self.streamers[streamer_index].print_history()}",
-                        extra={"emoji": ":moneybag:"},
-                    )
+                
+                # i think there are better solution but it's work like it supposed
+                streamer_history = f"\t\t\t{"\n\t\t\t".join(self.streamers[streamer_index].print_history().split("; "))}" 
+                
+                logger.info(
+                    f"{streamer_gain}\n{streamer_history}",
+                    extra={"emoji": ":moneybag:"},
+                )
