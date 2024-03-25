@@ -486,10 +486,13 @@ class TwitchChannelPointsMiner:
                     - self.original_streamers[streamer_index]
                 )
                 
+                from colorama import Fore
+                streamer_highlight = Fore.YELLOW
+                
                 streamer_gain = (
-                    f"{self.streamers[streamer_index]}, Total Points Gained: {_millify(gained)}"
+                    f"{streamer_highlight}{self.streamers[streamer_index]}{Fore.RESET}, Total Points Gained: {_millify(gained)}"
                     if Settings.logger.less
-                    else f"{repr(self.streamers[streamer_index])}, Total Points Gained (after farming - before farming): {_millify(gained)}"
+                    else f"{streamer_highlight}{repr(self.streamers[streamer_index])}{Fore.RESET}, Total Points Gained (after farming - before farming): {_millify(gained)}"
                 )
                 
                 # i think there are better solution but it's work like it supposed
