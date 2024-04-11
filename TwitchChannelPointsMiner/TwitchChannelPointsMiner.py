@@ -496,7 +496,7 @@ class TwitchChannelPointsMiner:
                 )
                 
                 # i think there are better solution but it's work like it supposed
-                streamer_history = f"\t\t\t{"\n\t\t\t".join(self.streamers[streamer_index].print_history().split("; "))}" 
+                streamer_history = f"\t\t\t{'\n\t\t\t'.join(self.streamers[streamer_index].print_history().split('; '))}" 
                 
                 logger.info(
                     f"{streamer_gain}\n{streamer_history}",
