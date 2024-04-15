@@ -143,7 +143,7 @@ class TwitchChannelPointsMiner:
         self.claim_drops_startup = claim_drops_startup
         self.priority = priority if isinstance(priority, list) else [priority]
 
-        self.streamers = []
+        self.streamers: list[Streamer] = []
         self.events_predictions = {}
         self.minute_watcher_thread = None
         self.sync_campaigns_thread = None
@@ -495,8 +495,8 @@ class TwitchChannelPointsMiner:
                     else f"{streamer_highlight}{repr(self.streamers[streamer_index])}{Fore.RESET}, Total Points Gained (after farming - before farming): {_millify(gained)}"
                 )
                 
-                # i think there are better solution but it's work like it supposed
-                streamer_history = f"\t\t\t{'\n\t\t\t'.join(self.streamers[streamer_index].print_history().split('; '))}" 
+                indent = ' ' * 25
+                streamer_history = '\n'.join(f"{indent}{history}" for history in self.streamers[streamer_index].print_history().split('; ')) 
                 
                 logger.info(
                     f"{streamer_gain}\n{streamer_history}",
