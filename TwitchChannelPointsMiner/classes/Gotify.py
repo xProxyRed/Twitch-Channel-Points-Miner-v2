@@ -5,7 +5,7 @@ import requests
 from TwitchChannelPointsMiner.classes.Settings import Events
 
 class Gotify(object):
-    __slots__ = ["endpoint", "priority, ""events"]
+    __slots__ = ["endpoint", "priority", "events"]
 
     def __init__(self, endpoint: str, priority: int, events: list):
         self.endpoint = endpoint
