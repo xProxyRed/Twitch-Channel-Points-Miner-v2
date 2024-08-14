@@ -196,7 +196,7 @@ class GlobalFormatter(logging.Formatter):
             self.webhook(record)
             self.matrix(record)
             self.pushover(record)
-            self.gotify(gotify)
+            self.gotify(record)
 
             if self.settings.colored is True:
                 record.msg = (
