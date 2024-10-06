@@ -19,6 +19,7 @@ from secrets import choice, token_hex
 # from urllib.parse import quote
 # from base64 import urlsafe_b64decode
 # from datetime import datetime
+from typing import Dict, Any
 
 from TwitchChannelPointsMiner.classes.entities.Campaign import Campaign
 from TwitchChannelPointsMiner.classes.entities.Drop import Drop
@@ -46,6 +47,7 @@ from TwitchChannelPointsMiner.utils import (
 )
 
 logger = logging.getLogger(__name__)
+JsonType = Dict[str, Any]
 
 
 class Twitch(object):
@@ -492,9 +494,14 @@ class Twitch(object):
                         logger.debug(
                             f"Sent PlaybackAccessToken request for {streamers[index]}"
                         )
-                        signature = responsePlaybackAccessToken["data"]['streamPlaybackAccessToken']["signature"]
-                        value = responsePlaybackAccessToken["data"]['streamPlaybackAccessToken']["value"]
+                        signature: JsonType | None = responsePlaybackAccessToken["data"].get(
+                            'streamPlaybackAccessToken', {}).get("signature")
+                        value: JsonType | None = responsePlaybackAccessToken["data"].get(
+                            'streamPlaybackAccessToken', {}).get("value")
+
                         if not signature or not value:
+                            logger.error(
+                                f"Invalid response from Twitch: {responsePlaybackAccessToken}")
                             continue
 
                         # encoded_value = quote(json.dumps(value))
