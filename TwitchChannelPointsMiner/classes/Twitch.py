@@ -584,6 +584,7 @@ class Twitch(object):
                                                     "skip_discord": True,
                                                     "skip_webhook": True,
                                                     "skip_matrix": True,
+                                                    "skip_gotify": True
                                                 },
                                             )
 
@@ -600,6 +601,11 @@ class Twitch(object):
                                             )
                                         if Settings.logger.webhook is not None:
                                             Settings.logger.webhook.send(
+                                                "\n".join(drop_messages),
+                                                Events.DROP_STATUS,
+                                            )
+                                        if Settings.logger.gotify is not None:
+                                            Settings.logger.gotify.send(
                                                 "\n".join(drop_messages),
                                                 Events.DROP_STATUS,
                                             )
