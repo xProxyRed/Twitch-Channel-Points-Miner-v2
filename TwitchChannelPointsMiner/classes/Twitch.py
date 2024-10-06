@@ -11,13 +11,16 @@ import random
 import re
 import string
 import time
-from pathlib import Path
-from secrets import choice, token_hex
-
-# import json
 import requests
 import validators
+# import json
+
+from pathlib import Path
+from secrets import choice, token_hex
 from typing import Dict, Any
+# from urllib.parse import quote
+# from base64 import urlsafe_b64decode
+# from datetime import datetime
 
 from TwitchChannelPointsMiner.classes.entities.Campaign import Campaign
 from TwitchChannelPointsMiner.classes.entities.CommunityGoal import CommunityGoal
@@ -44,11 +47,6 @@ from TwitchChannelPointsMiner.utils import (
     create_chunks,
     internet_connection_available,
 )
-
-# from urllib.parse import quote
-# from base64 import urlsafe_b64decode
-# from datetime import datetime
-
 
 logger = logging.getLogger(__name__)
 JsonType = Dict[str, Any]
