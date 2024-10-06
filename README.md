@@ -713,7 +713,7 @@ pkg upgrade
 
 **2. Install packages to Termux**
 ```
-pkg install python git rust libjpeg-turbo libcrypt ndk-sysroot clang zlib binutils tur-repo
+pkg install python git rust libjpeg-turbo libcrypt ndk-sysroot clang zlib binutils tur-repo python-cryptography
 LDFLAGS="-L${PREFIX}/lib/" CFLAGS="-I${PREFIX}/include/" pip install --upgrade wheel pillow
 ```
 Note: `pkg install tur-repo` will basically enable the [user repository](https://github.com/termux-user-repository/tur) _(Very similar to Arch AUR)_ and `python-pandas` pre-compiled package comes exactly from this repository.
