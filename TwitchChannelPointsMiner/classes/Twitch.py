@@ -492,19 +492,31 @@ class Twitch(object):
                         }
 
                         # Get signature and value using the post_gql_request method
-                        responsePlaybackAccessToken = self.post_gql_request(
-                            json_data)
-                        logger.debug(
-                            f"Sent PlaybackAccessToken request for {streamers[index]}"
-                        )
-                        signature: JsonType | None = responsePlaybackAccessToken["data"].get(
-                            'streamPlaybackAccessToken', {}).get("signature")
-                        value: JsonType | None = responsePlaybackAccessToken["data"].get(
-                            'streamPlaybackAccessToken', {}).get("value")
+                        try:
+                            responsePlaybackAccessToken = self.post_gql_request(
+                                json_data)
+                            logger.debug(
+                                f"Sent PlaybackAccessToken request for {streamers[index]}")
 
-                        if not signature or not value:
+                            if 'data' not in responsePlaybackAccessToken:
+                                logger.error(
+                                    f"Invalid response from Twitch: {responsePlaybackAccessToken}")
+                                continue
+
+                            streamPlaybackAccessToken = responsePlaybackAccessToken["data"].get(
+                                'streamPlaybackAccessToken', {})
+                            signature = streamPlaybackAccessToken.get(
+                                "signature")
+                            value = streamPlaybackAccessToken.get("value")
+
+                            if not signature or not value:
+                                logger.error(
+                                    f"Missing signature or value in Twitch response: {responsePlaybackAccessToken}")
+                                continue
+
+                        except Exception as e:
                             logger.error(
-                                f"Invalid response from Twitch: {responsePlaybackAccessToken}")
+                                f"Error fetching PlaybackAccessToken for {streamers[index]}: {str(e)}")
                             continue
 
                         # encoded_value = quote(json.dumps(value))
