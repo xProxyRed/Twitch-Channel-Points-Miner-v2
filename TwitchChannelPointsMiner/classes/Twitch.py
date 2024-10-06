@@ -11,17 +11,16 @@ import random
 import re
 import string
 import time
+from pathlib import Path
+from secrets import choice, token_hex
+
 # import json
 import requests
 import validators
-from pathlib import Path
-from secrets import choice, token_hex
-# from urllib.parse import quote
-# from base64 import urlsafe_b64decode
-# from datetime import datetime
 from typing import Dict, Any
 
 from TwitchChannelPointsMiner.classes.entities.Campaign import Campaign
+from TwitchChannelPointsMiner.classes.entities.CommunityGoal import CommunityGoal
 from TwitchChannelPointsMiner.classes.entities.Drop import Drop
 from TwitchChannelPointsMiner.classes.Exceptions import (
     StreamerDoesNotExistException,
@@ -45,6 +44,11 @@ from TwitchChannelPointsMiner.utils import (
     create_chunks,
     internet_connection_available,
 )
+
+# from urllib.parse import quote
+# from base64 import urlsafe_b64decode
+# from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 JsonType = Dict[str, Any]
@@ -111,7 +115,7 @@ class Twitch(object):
                     "player": "site",
                     "user_id": self.twitch_login.get_user_id(),
                     "live": True,
-                    "channel": streamer.username
+                    "channel": streamer.username,
                 }
 
                 if (
@@ -135,6 +139,7 @@ class Twitch(object):
             # fixes AttributeError: 'NoneType' object has no attribute 'group'
             # headers = {"User-Agent": self.user_agent}
             from TwitchChannelPointsMiner.constants import USER_AGENTS
+
             headers = {"User-Agent": USER_AGENTS["Linux"]["FIREFOX"]}
 
             main_page_request = requests.get(
@@ -485,7 +490,7 @@ class Twitch(object):
                             "isVod": False,
                             "vodID": "",
                             # "playerType": "site"
-                            "playerType": "picture-by-picture"
+                            "playerType": "picture-by-picture",
                         }
 
                         # Get signature and value using the post_gql_request method
@@ -510,8 +515,11 @@ class Twitch(object):
                         RequestBroadcastQualitiesURL = f"https://usher.ttvnw.net/api/channel/hls/{streamers[index].username}.m3u8?sig={signature}&token={value}"
 
                         # Get list of video qualities
-                        responseBroadcastQualities = requests.get(RequestBroadcastQualitiesURL, headers={
-                                                                  "User-Agent": self.user_agent}, timeout=20)  # timeout=60
+                        responseBroadcastQualities = requests.get(
+                            RequestBroadcastQualitiesURL,
+                            headers={"User-Agent": self.user_agent},
+                            timeout=20,
+                        )  # timeout=60
                         logger.debug(
                             f"Send RequestBroadcastQualitiesURL request for {streamers[index]} - Status code: {responseBroadcastQualities.status_code}"
                         )
@@ -526,8 +534,11 @@ class Twitch(object):
                             continue
 
                         # Get list of video URLs
-                        responseStreamURLList = requests.get(BroadcastLowestQualityURL, headers={
-                                                             "User-Agent": self.user_agent}, timeout=20)  # timeout=60
+                        responseStreamURLList = requests.get(
+                            BroadcastLowestQualityURL,
+                            headers={"User-Agent": self.user_agent},
+                            timeout=20,
+                        )  # timeout=60
                         logger.debug(
                             f"Send BroadcastLowestQualityURL request for {streamers[index]} - Status code: {responseStreamURLList.status_code}"
                         )
@@ -541,8 +552,11 @@ class Twitch(object):
                             continue
 
                         # Perform a HEAD request to simulate watching the stream
-                        responseStreamLowestQualityURL = requests.head(StreamLowestQualityURL, headers={
-                                                                       "User-Agent": self.user_agent}, timeout=20)  # timeout=60
+                        responseStreamLowestQualityURL = requests.head(
+                            StreamLowestQualityURL,
+                            headers={"User-Agent": self.user_agent},
+                            timeout=20,
+                        )  # timeout=60
                         logger.debug(
                             f"Send StreamLowestQualityURL request for {streamers[index]} - Status code: {responseStreamLowestQualityURL.status_code}"
                         )
@@ -591,6 +605,7 @@ class Twitch(object):
                                                     "skip_discord": True,
                                                     "skip_webhook": True,
                                                     "skip_matrix": True,
+                                                    "skip_gotify": True
                                                 },
                                             )
 
@@ -607,6 +622,11 @@ class Twitch(object):
                                             )
                                         if Settings.logger.webhook is not None:
                                             Settings.logger.webhook.send(
+                                                "\n".join(drop_messages),
+                                                Events.DROP_STATUS,
+                                            )
+                                        if Settings.logger.gotify is not None:
+                                            Settings.logger.gotify.send(
                                                 "\n".join(drop_messages),
                                                 Events.DROP_STATUS,
                                             )
@@ -645,9 +665,21 @@ class Twitch(object):
             streamer.channel_points = community_points["balance"]
             streamer.activeMultipliers = community_points["activeMultipliers"]
 
+            if streamer.settings.community_goals is True:
+                streamer.community_goals = {
+                    goal["id"]: CommunityGoal.from_gql(goal)
+                    for goal in channel["communityPointsSettings"]["goals"]
+                }
+
             if community_points["availableClaim"] is not None:
                 self.claim_bonus(
                     streamer, community_points["availableClaim"]["id"])
+
+            if streamer.settings.community_goals is True:
+                self.contribute_to_community_goals(streamer)
+
+            if streamer.settings.community_goals is True:
+                self.contribute_to_community_goals(streamer)
 
     def make_predictions(self, event):
         decision = event.bet.calculate(event.streamer.channel_points)
@@ -752,9 +784,7 @@ class Twitch(object):
             )
 
         json_data = copy.deepcopy(GQLOperations.CommunityMomentCallout_Claim)
-        json_data["variables"] = {
-            "input": {"momentID": moment_id}
-        }
+        json_data["variables"] = {"input": {"momentID": moment_id}}
         self.post_gql_request(json_data)
 
     # === CAMPAIGNS / DROPS / INVENTORY === #
@@ -789,8 +819,10 @@ class Twitch(object):
         campaigns = response["data"]["currentUser"]["dropCampaigns"] or []
 
         if status is not None:
-            campaigns = list(
-                filter(lambda x: x["status"] == status.upper(), campaigns)) or []
+            campaigns = (
+                list(filter(lambda x: x["status"] ==
+                     status.upper(), campaigns)) or []
+            )
 
         return campaigns
 
@@ -885,7 +917,6 @@ class Twitch(object):
                 if (
                     campaigns_update == 0
                     # or ((time.time() - campaigns_update) / 60) > 60
-
                     # TEMPORARY AUTO DROP CLAIMING FIX
                     # 30 minutes instead of 60 minutes
                     or ((time.time() - campaigns_update) / 30) > 30
@@ -939,3 +970,75 @@ class Twitch(object):
                 self.__check_connection_handler(chunk_size)
 
             self.__chuncked_sleep(60, chunk_size=chunk_size)
+
+    def contribute_to_community_goals(self, streamer):
+        # Don't bother doing the request if no goal is currently started or in stock
+        if any(
+            goal.status == "STARTED" and goal.is_in_stock
+            for goal in streamer.community_goals.values()
+        ):
+            json_data = copy.deepcopy(GQLOperations.UserPointsContribution)
+            json_data["variables"] = {"channelLogin": streamer.username}
+            response = self.post_gql_request(json_data)
+            user_goal_contributions = response["data"]["user"]["channel"]["self"][
+                "communityPoints"
+            ]["goalContributions"]
+
+            logger.debug(
+                f"Found {len(user_goal_contributions)} community goals for the current stream"
+            )
+
+            for goal_contribution in user_goal_contributions:
+                goal_id = goal_contribution["goal"]["id"]
+                goal = streamer.community_goals[goal_id]
+                if goal is None:
+                    # TODO should this trigger a new load context request
+                    logger.error(
+                        f"Unable to find context data for community goal {goal_id}"
+                    )
+                else:
+                    user_stream_contribution = goal_contribution[
+                        "userPointsContributedThisStream"
+                    ]
+                    user_left_to_contribute = (
+                        goal.per_stream_user_maximum_contribution
+                        - user_stream_contribution
+                    )
+                    amount = min(
+                        goal.amount_left(),
+                        user_left_to_contribute,
+                        streamer.channel_points,
+                    )
+                    if amount > 0:
+                        self.contribute_to_community_goal(
+                            streamer, goal_id, goal.title, amount
+                        )
+                    else:
+                        logger.debug(
+                            f"Not contributing to community goal {goal.title}, user channel points {streamer.channel_points}, user stream contribution {user_stream_contribution}, all users total contribution {goal.points_contributed}"
+                        )
+
+    def contribute_to_community_goal(self, streamer, goal_id, title, amount):
+        json_data = copy.deepcopy(
+            GQLOperations.ContributeCommunityPointsCommunityGoal)
+        json_data["variables"] = {
+            "input": {
+                "amount": amount,
+                "channelID": streamer.channel_id,
+                "goalID": goal_id,
+                "transactionID": token_hex(16),
+            }
+        }
+
+        response = self.post_gql_request(json_data)
+
+        error = response["data"]["contributeCommunityPointsCommunityGoal"]["error"]
+        if error:
+            logger.error(
+                f"Unable to contribute channel points to community goal '{title}', reason '{error}'"
+            )
+        else:
+            logger.info(
+                f"Contributed {amount} channel points to community goal '{title}'"
+            )
+            streamer.channel_points -= amount
