@@ -108,15 +108,42 @@ class EventParser:
         return None
 
     @staticmethod
-    def parse_chat_message(message: str) -> Optional[Dict[str, Any]]:
-        """Parst Chat Messages"""
-        pattern = r"([^\\s]+) at #([^\\s]+) wrote: (.+)"
+    def parse_bet_refund(message: str) -> Optional[Dict[str, Any]]:
+        """Parst Bet Refund Messages"""
+        # Pattern für: EventPrediction(...username=X...title=Y...) - Decision: Z - Result: REFUND, Refunded: +0
+        pattern = r"EventPrediction\(.*username=([^,]+),.*title=([^)]+)\).*Decision:\s*(\d+):\s*([^-]+)\s*-\s*Result:\s*REFUND"
         match = re.search(pattern, message)
         if match:
             return {
                 'username': match.group(1),
-                'channel': match.group(2),
-                'content': match.group(3)
+                'title': match.group(2),
+                'decision': match.group(3),
+                'decision_text': match.group(4).strip(),
+                'result': 'refund'
+            }
+        return None
+
+    @staticmethod
+    def parse_chat_message(message: str) -> Optional[Dict[str, Any]]:
+        """Parst Chat Messages"""
+        # Pattern für: 💬 username at #channel wrote: message
+        pattern1 = r"💬\s+([^\s]+)\s+at\s+#([^\s]+)\s+wrote:\s*(.+)"
+        match1 = re.search(pattern1, message)
+        if match1:
+            return {
+                'username': match1.group(1),
+                'channel': match1.group(2),
+                'content': match1.group(3)
+            }
+        
+        # Fallback Pattern für: 💬 username in #channel: message
+        pattern2 = r"💬\s+([^\s]+)\s+in\s+#([^\s]+):\s*(.+)"
+        match2 = re.search(pattern2, message)
+        if match2:
+            return {
+                'username': match2.group(1),
+                'channel': match2.group(2),
+                'content': match2.group(3)
             }
         return None
 
@@ -131,6 +158,7 @@ class DiscordEmbedBuilder:
         'points': 0x4a90e2,      # Elegantes Blau
         'win': 0x27ae60,         # Erfolgs-Grün
         'lose': 0xc0392b,        # Verlust-Rot
+        'refund': 0x9b59b6,      # Lila für Refund
         'raid': 0xe74c3c,        # Kräftiges Rot für Action
         'bet': 0x3498db,         # Discord-Blau
         'filter': 0xf39c12,      # Warnung-Orange
@@ -346,6 +374,54 @@ class DiscordEmbedBuilder:
         
         return embed
 
+    @staticmethod
+    def create_chat_embed(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Erstellt Chat Message Embed"""
+        embed = DiscordEmbedBuilder.create_base_embed(
+            data['channel'],
+            f"💬 Chat Mention in #{data['channel']}",
+            'chat'
+        )
+        
+        # Spezielle Behandlung für Mentions (@Dennis_Franklyn etc.)
+        content = data['content']
+        if '@' in content:
+            embed["embeds"][0]["description"] = f"**{data['username']} erwähnt dich!** 🔔"
+            embed["embeds"][0]["color"] = 0xf39c12  # Orange für Mentions
+        else:
+            embed["embeds"][0]["description"] = f"**Chat Nachricht** 💭"
+            embed["embeds"][0]["color"] = 0x95a5a6  # Grau für normale Messages
+        
+        # Fields hinzufügen
+        DiscordEmbedBuilder.add_field(embed, "👤 User", data['username'], True)
+        DiscordEmbedBuilder.add_field(embed, "📺 Channel", f"#{data['channel']}", True)
+        DiscordEmbedBuilder.add_field(embed, "💬 Nachricht", content, False)
+        
+        # URL für den Channel
+        embed["embeds"][0]["url"] = f"https://twitch.tv/{data['channel']}"
+        
+        return embed
+
+    @staticmethod
+    def create_refund_embed(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Erstellt Bet Refund Embed"""
+        embed = DiscordEmbedBuilder.create_base_embed(
+            data['username'],
+            f"🔄 {data['username']} - Prediction Refund",
+            'refund'
+        )
+        
+        embed["embeds"][0]["description"] = f"**Prediction wurde storniert!** 🔄\n💰 Points zurückerstattet"
+        embed["embeds"][0]["color"] = 0x9b59b6  # Lila
+        
+        # Refund-spezifische Fields
+        DiscordEmbedBuilder.add_field(embed, "🎯 Prediction", data['title'], False)
+        DiscordEmbedBuilder.add_field(embed, "🎲 Gewählte Option", f"{data['decision']}: {data['decision_text']}", True)
+        DiscordEmbedBuilder.add_field(embed, "📊 Ergebnis", "REFUND", True)
+        DiscordEmbedBuilder.add_field(embed, "💸 Status", "Points zurückerstattet", True)
+        
+        return embed
+
 
 # Icon Caching mit TTL
 _icon_cache = {}
@@ -418,6 +494,11 @@ class Discord:
                 if data:
                     embed_data = DiscordEmbedBuilder.create_bet_embed(data)
             
+            elif "Result: REFUND" in message:
+                data = EventParser.parse_bet_refund(message)
+                if data:
+                    embed_data = DiscordEmbedBuilder.create_refund_embed(data)
+            
             elif event == Events.JOIN_RAID:
                 data = EventParser.parse_raid_join(message)
                 if data:
@@ -436,9 +517,7 @@ class Discord:
             elif event == Events.CHAT_MENTION:
                 data = EventParser.parse_chat_message(message)
                 if data:
-                    # Einfache Text-Message für Chat
-                    self._send_simple_message(f"💬 **{data['username']}** in #{data['channel']}: {data['content']}")
-                    return
+                    embed_data = DiscordEmbedBuilder.create_chat_embed(data)
 
             # Embed senden falls erstellt
             if embed_data:
